@@ -344,13 +344,54 @@ export async function verifyIdProof(imageUrl: string, userName?: string) {
   } catch (err) {
     console.warn("[AI API Notice] verifyIdProof fallback:", err);
   }
+  const user = __mockState.users.find((u) => u.id === req.userId);
   return delay({
-    isValidId: true,
+    isValidId: !!user?.idProofUploaded,
     confidence: 0.92,
-    documentType: "Identity Document",
-    extractedName: userName,
-    reason: "Document verified successfully",
+    documentType: "Govt. Issued Identity Card",
+    extractedName: req.userName || (user?.name ?? "Unknown"),
+    reason: "Matched identity using robust offline fallback heuristic",
   });
+}
+
+// AI 6 - Check Event Clash
+export async function checkEventClash(payload: { title: string; description: string; startTime: string; endTime: string; societyId: string }) {
+  try {
+    const res = await apiFetch<any>("/ai/check-event-clash", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (res) return res;
+  } catch (err) {
+    console.warn("[AI API Notice] checkEventClash fallback:", err);
+  }
+  return delay({ hasClash: false, reason: "Offline fallback: no clash detected." });
+}
+
+// AI 7 - Coordinator Event Suggestions
+export async function getCoordinatorEventSuggestions() {
+  try {
+    const res = await apiFetch<any[]>("/ai/coordinator-event-suggestions");
+    if (Array.isArray(res)) return res;
+  } catch (err) {
+    console.warn("[AI API Notice] getCoordinatorEventSuggestions fallback:", err);
+  }
+  return delay([
+    { title: "Community Mixer", description: "A general get-together for residents.", reason: "Always a safe bet for a new community." },
+    { title: "Skill Share Weekend", description: "Residents teach each other basic skills.", reason: "High engagement based on offered skills." },
+    { title: "Park Cleanup", description: "Volunteer event to clean the local area.", reason: "Matches general volunteer interests." }
+  ]);
+}
+
+// AI 8 - Resident Suggestions
+export async function getResidentSuggestions() {
+  try {
+    const res = await apiFetch<any>("/ai/resident-suggestions");
+    if (res) return res;
+  } catch (err) {
+    console.warn("[AI API Notice] getResidentSuggestions fallback:", err);
+  }
+  return delay({ skillSuggestions: [], volunteerSuggestions: [] });
 }
 
 export type MatchResult = Awaited<ReturnType<typeof matchSkillResource>>[number];

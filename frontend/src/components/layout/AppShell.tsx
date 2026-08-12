@@ -198,16 +198,53 @@ export function AppShell({ children }: { children?: ReactNode }) {
           />
         )}
 
-        {/* Sidebar Container */}
         <aside
+          onMouseEnter={() => {
+            if (window.matchMedia("(min-width: 1024px)").matches) {
+              setOpen(true);
+            }
+          }}
+          onMouseLeave={() => {
+            if (window.matchMedia("(min-width: 1024px)").matches) {
+              setOpen(false);
+            }
+          }}
           className={cn(
-            "fixed inset-y-0 top-16 left-0 z-30 w-64 shrink-0 border-r border-line bg-white transition-transform duration-300 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:translate-x-0",
-            open ? "translate-x-0 shadow-xl lg:shadow-none" : "-translate-x-full",
+            "fixed inset-y-0 top-16 left-0 z-30 shrink-0 border-r border-line bg-white lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:translate-x-0 group",
+            open ? "translate-x-0 shadow-xl lg:shadow-none" : "-translate-x-full lg:translate-x-0"
           )}
+          style={{
+            width: open ? '256px' : '76px',
+            transition: 'width 300ms cubic-bezier(0.4,0,0.2,1), transform 300ms cubic-bezier(0.4,0,0.2,1)',
+            overflow: 'hidden',
+          }}
         >
-          <nav className="flex h-full flex-col justify-between p-4 bg-white">
-            <div className="space-y-1.5 overflow-y-auto max-h-[calc(100vh-12rem)] pr-1">
-              <div className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest px-3 mb-2">Navigation</div>
+          <nav
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              height: '100%',
+              padding: '16px 14px',
+              backgroundColor: '#ffffff',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                maxHeight: 'calc(100vh - 12rem)',
+              }}
+              className="scrollbar-none"
+            >
+              <div className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1 whitespace-nowrap opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300"
+                style={{ paddingLeft: '10px' }}
+              >
+                Navigation
+              </div>
               {nav.map((item) => {
                 const Icon = item.icon;
                 const active = pathname === item.to || (item.to !== "/app/dashboard" && pathname.startsWith(item.to));
@@ -216,30 +253,82 @@ export function AppShell({ children }: { children?: ReactNode }) {
                     key={item.to}
                     to={item.to}
                     onClick={() => setOpen(false)}
-                    className={cn(
-                      "flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold tracking-wide transition-all duration-200 group",
-                      active
-                        ? "bg-deep-forest text-white shadow-sm font-bold"
-                        : "text-ink/80 hover:bg-panel hover:text-ink hover:translate-x-[2px]",
-                    )}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      flexShrink: 0,
+                      width: '40px',
+                      height: '40px',
+                      minWidth: open ? '228px' : '40px',
+                      borderRadius: '9999px',
+                      paddingLeft: '10px',
+                      paddingRight: open ? '14px' : '10px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      backgroundColor: active ? '#2d6a4f' : 'transparent',
+                      color: active ? '#ffffff' : '#6b7280',
+                      transition: 'min-width 300ms cubic-bezier(0.4,0,0.2,1), background-color 150ms, color 150ms, padding 300ms cubic-bezier(0.4,0,0.2,1)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textDecoration: 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) {
+                        (e.currentTarget as HTMLElement).style.backgroundColor = '#f3f4f6';
+                        (e.currentTarget as HTMLElement).style.color = '#374151';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) {
+                        (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                        (e.currentTarget as HTMLElement).style.color = '#6b7280';
+                      }
+                    }}
                   >
-                    <div className="flex items-center gap-3">
-                      <Icon className={cn("h-4 w-4 flex-shrink-0 transition-colors", active ? "text-white" : "text-on-surface-variant group-hover:text-ink")} />
-                      <span>{item.label}</span>
-                    </div>
-                    {!active && <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-all text-on-surface-variant/80" />}
+                    <span style={{ display: 'flex', flexShrink: 0, width: 20, height: 20 }}>
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        opacity: open ? 1 : 0,
+                        transition: `opacity ${open ? '160ms' : '80ms'} ease`,
+                        transitionDelay: open ? '160ms' : '0ms',
+                        letterSpacing: '0.01em',
+                      }}
+                    >
+                      {item.label}
+                    </span>
                   </Link>
                 );
               })}
             </div>
 
             {/* Bottom Profile card */}
-            <div className="mt-4 pt-4 border-t border-line/65 flex flex-col gap-3">
-              <div className="flex items-center gap-3 px-1.5">
+            <div className="pt-4 border-t border-line/65 flex flex-col gap-3 overflow-hidden">
+              <div
+                className="flex items-center whitespace-nowrap"
+                style={{
+                  gap: '10px',
+                  paddingLeft: '2px',
+                  paddingRight: open ? '14px' : '2px',
+                  transition: 'padding 300ms cubic-bezier(0.4,0,0.2,1)',
+                }}
+              >
                 <div className="h-9 w-9 rounded-xl bg-soft-violet/10 border border-soft-violet/20 flex items-center justify-center text-xs font-bold text-soft-violet flex-shrink-0">
                   {getInitials(user.name)}
                 </div>
-                <div className="min-w-0">
+                <div
+                  className="min-w-0"
+                  style={{
+                    opacity: open ? 1 : 0,
+                    transition: `opacity ${open ? '160ms' : '80ms'} ease`,
+                    transitionDelay: open ? '160ms' : '0ms',
+                  }}
+                >
                   <div className="text-xs font-bold text-ink truncate leading-tight">{user.name}</div>
                   <div className="text-[10px] text-on-surface-variant truncate mt-0.5">{user.email}</div>
                 </div>
@@ -250,7 +339,7 @@ export function AppShell({ children }: { children?: ReactNode }) {
                   onClick={toggleView}
                   className="w-full sm:hidden flex items-center justify-center gap-2 border border-line-strong hover:bg-panel text-ink text-[10px] font-bold py-2 rounded-xl cursor-pointer transition-all"
                 >
-                  <Repeat className="h-3.5 w-3.5" /> Toggle Role view
+                  <Repeat className="h-3.5 w-3.5 flex-shrink-0" /> Toggle Role view
                 </button>
               )}
             </div>
@@ -261,7 +350,7 @@ export function AppShell({ children }: { children?: ReactNode }) {
         <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8 bg-surface-variant/20 overflow-y-auto">
           <div 
             key={pathname} 
-            className="max-w-6xl mx-auto animate-page-fade"
+            className="max-w-[1600px] mx-auto animate-page-fade"
           >
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-40 gap-5">

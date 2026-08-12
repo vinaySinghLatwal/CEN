@@ -66,3 +66,51 @@ def test_verify_id_proof(client, db_session):
     assert ai_resp.status_code == 200
     assert "isValidId" in ai_resp.json()
 
+def test_check_event_clash(client, db_session):
+    from src.auth.service import create_user
+    from src.users.schemas import UserCreate
+    from src.societies.models import Society
+    from src.events.models import EventItem
+
+    owner = create_user(db_session, UserCreate(name="Owner", email="clashowner@cen.app", password="password123"), role="owner")
+    soc = Society(name="Clash Society", address="1 Clash Rd", admin_id=owner.id, coordinator_count=2, key="CLASH-SOC")
+    db_session.add(soc)
+    db_session.commit()
+    
+    # Add an existing event
+    event = EventItem(
+        title="Existing Event",
+        description="This is an existing event",
+        start_time="2026-08-01T10:00:00Z",
+        end_time="2026-08-01T12:00:00Z",
+        created_by_coordinator_id=owner.id,
+        volunteers_needed=5,
+        volunteers="",
+        society_id=soc.id
+    )
+    db_session.add(event)
+    db_session.commit()
+
+    coord = create_user(db_session, UserCreate(name="Coord Clash", email="coordclash@cen.app", password="password123"), role="coordinator")
+    coord.is_coordinator = True
+    coord.society_id = soc.id
+    db_session.commit()
+
+    login_resp = client.post("/api/v1/auth/login", json={"email": "coordclash@cen.app", "password": "password123"})
+    token = login_resp.json().get("accessToken") or login_resp.json().get("access_token")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    clash_payload = {
+        "title": "New Event", 
+        "description": "An event that clashes", 
+        "startTime": "2026-08-01T11:00:00Z", 
+        "endTime": "2026-08-01T13:00:00Z", 
+        "societyId": soc.id
+    }
+    
+    resp = client.post("/api/v1/ai/check-event-clash", json=clash_payload, headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "hasClash" in data
+    assert "reason" in data
+

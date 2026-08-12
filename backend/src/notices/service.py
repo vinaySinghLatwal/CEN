@@ -41,6 +41,6 @@ def delete_notice(db: Session, notice_id: str) -> bool:
 
 
 def has_posted_today(db: Session, user_id: str) -> bool:
-    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+    today_str = datetime.now(datetime.UTC).strftime("%Y-%m-%d")
     n = db.query(Notice).filter(Notice.posted_by_id == user_id, Notice.date == today_str).first()
     return n is not None

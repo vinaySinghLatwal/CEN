@@ -17,6 +17,10 @@ from src.ai.schemas import (
     VerifyIdProofPayload,
     VerifyIdProofResult,
     VolunteerSuggestionResult,
+    CheckEventClashPayload,
+    CheckEventClashResult,
+    CoordinatorEventSuggestion,
+    ResidentSuggestionsResult,
 )
 
 from src.database import get_db
@@ -71,3 +75,32 @@ def suggest_volunteers(
     current_user: User = Depends(require_roles(["owner", "admin", "coordinator"])),
 ):
     return ai_service.suggest_volunteers(db, event_id)
+
+
+@router.post("/check-event-clash", response_model=CheckEventClashResult)
+def check_event_clash(
+    payload: CheckEventClashPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["owner", "admin", "coordinator"])),
+):
+    return ai_service.check_event_clash(db, payload.title, payload.description, payload.start_time, payload.end_time, payload.society_id)
+
+
+@router.get("/coordinator-event-suggestions", response_model=List[CoordinatorEventSuggestion])
+def get_coordinator_event_suggestions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["owner", "admin", "coordinator"])),
+):
+    if not current_user.society_id:
+        return []
+    return ai_service.get_coordinator_event_suggestions(db, current_user.society_id)
+
+
+@router.get("/resident-suggestions", response_model=ResidentSuggestionsResult)
+def get_resident_suggestions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_token),
+):
+    if not current_user.society_id:
+        return {"skill_suggestions": [], "volunteer_suggestions": []}
+    return ai_service.get_resident_suggestions(db, current_user)

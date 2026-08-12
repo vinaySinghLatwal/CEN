@@ -11,8 +11,9 @@ import { eventService } from "@/services";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Calendar, Users } from "lucide-react";
+import { Calendar as CalendarIcon, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EventCalendar } from "@/components/calendar/EventCalendar";
 
 export const Route = createFileRoute("/app/events")({ component: Page });
 
@@ -23,6 +24,60 @@ function Page() {
   const events = useQuery({ queryKey: ["ev", sid], queryFn: () => eventService.list(sid) });
   const vrs = useQuery({ queryKey: ["vr", sid], queryFn: () => eventService.listVolunteerRequests(sid) });
   const myInvites = vrs.data?.filter((v) => v.residentId === user!.id && v.type === "coordinator-invited" && v.status === "pending") ?? [];
+
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+
+  const renderEventCard = (e: any) => {
+    const iAmIn = e.volunteers.includes(user!.id);
+    const mySelfReq = vrs.data?.find((v) => v.eventId === e.id && v.residentId === user!.id && v.type === "self-requested");
+    
+    return (
+      <Card key={e.id} className="border-line/60 shadow-[0_4px_20px_-4px_rgba(16,86,68,0.04)] hover:shadow-[0_12px_30px_-6px_rgba(16,86,68,0.1)] hover:-translate-y-0.5 transition-all duration-300 bg-white flex flex-col justify-between overflow-hidden">
+        <CardContent className="p-6 flex flex-col justify-between flex-1 space-y-4">
+          <div className="space-y-2">
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-deep-forest/5 text-deep-forest border border-deep-forest/15 flex items-center justify-center flex-shrink-0">
+                  <CalendarIcon className="h-4.5 w-4.5" />
+                </div>
+                <h3 className="font-bold text-base sm:text-lg text-ink leading-snug">{e.title}</h3>
+              </div>
+              <Badge className="bg-deep-forest/5 text-deep-forest border border-deep-forest/15 uppercase text-xs font-bold tracking-wider px-2 py-0.5 rounded pointer-events-none">
+                {e.status}
+              </Badge>
+            </div>
+            <div className="text-xs text-on-surface-variant font-medium pt-1">Planned: <span className="font-semibold text-ink">{new Date(e.startTime).toLocaleString()} - {new Date(e.endTime).toLocaleTimeString()}</span> · Roster: <span className="font-semibold text-ink">{e.volunteers.length} / {e.volunteersNeeded}</span> Volunteers</div>
+            <p className="text-sm text-on-surface-variant leading-relaxed pt-1 line-clamp-3">{e.description}</p>
+          </div>
+
+          <div className="pt-3 border-t border-line/20 mt-auto flex justify-between items-center">
+            {iAmIn ? (
+              <div className="flex items-center justify-between w-full gap-2">
+                <Badge className="bg-emerald-50 border-emerald-200 text-emerald-800 text-xs font-bold uppercase tracking-wider h-9 px-3 border"><Users className="mr-1.5 h-3.5 w-3.5" /> Volunteering</Badge>
+                <LeaveEventDialog eventId={e.id} eventTitle={e.title} />
+              </div>
+            ) : mySelfReq ? (
+              <Badge variant="outline" className={cn(
+                "text-xs font-bold uppercase tracking-wider h-9 px-3 border",
+                mySelfReq.status === "pending" ? "bg-amber-50 border-amber-200 text-amber-800" :
+                mySelfReq.status === "rejected" ? "bg-rose-50 border-rose-200 text-rose-800" :
+                mySelfReq.status === "left" ? "bg-slate-50 border-slate-200 text-slate-800" :
+                "bg-slate-50 border-slate-200 text-slate-800"
+              )}>
+                Request: {mySelfReq.status}
+              </Badge>
+            ) : (
+              <Button size="sm" className="bg-deep-forest hover:bg-deep-forest/90 text-white font-semibold h-9 rounded-lg text-xs cursor-pointer shadow-sm active:scale-98 transition-all px-4" onClick={async () => {
+                await eventService.requestVolunteer(e.id, user!.id, user!.name, e.title);
+                qc.invalidateQueries();
+                toast.success("Volunteer request sent");
+              }}>Request to Volunteer</Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-6 pb-12 animate-page-fade">
@@ -48,59 +103,26 @@ function Page() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {events.data?.map((e) => {
-          const iAmIn = e.volunteers.includes(user!.id);
-          const mySelfReq = vrs.data?.find((v) => v.eventId === e.id && v.residentId === user!.id && v.type === "self-requested");
-          
-          return (
-            <Card key={e.id} className="border-line/60 shadow-[0_4px_20px_-4px_rgba(16,86,68,0.04)] hover:shadow-[0_12px_30px_-6px_rgba(16,86,68,0.1)] hover:-translate-y-0.5 transition-all duration-300 bg-white flex flex-col justify-between overflow-hidden">
-              <CardContent className="p-6 flex flex-col justify-between flex-1 space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-deep-forest/5 text-deep-forest border border-deep-forest/15 flex items-center justify-center flex-shrink-0">
-                        <Calendar className="h-4.5 w-4.5" />
-                      </div>
-                      <h3 className="font-bold text-base sm:text-lg text-ink leading-snug">{e.title}</h3>
-                    </div>
-                    <Badge className="bg-deep-forest/5 text-deep-forest border border-deep-forest/15 uppercase text-xs font-bold tracking-wider px-2 py-0.5 rounded pointer-events-none">
-                      {e.status}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-on-surface-variant font-medium pt-1">Planned Date: <span className="font-semibold text-ink">{e.date}</span> · Roster: <span className="font-semibold text-ink">{e.volunteers.length} / {e.volunteersNeeded}</span> Volunteers</div>
-                  <p className="text-sm text-on-surface-variant leading-relaxed pt-1 line-clamp-3">{e.description}</p>
-                </div>
+      <EventCalendar 
+        events={events.data || []}
+        defaultView="month"
+        onEventClick={(e) => setSelectedEvent(e)}
+        renderSchedule={() => (
+          <div className="grid gap-4 md:grid-cols-2">
+            {events.data?.map(renderEventCard)}
+          </div>
+        )}
+      />
 
-                <div className="pt-3 border-t border-line/20 mt-auto flex justify-between items-center">
-                  {iAmIn ? (
-                    <div className="flex items-center justify-between w-full gap-2">
-                      <Badge className="bg-emerald-50 border-emerald-200 text-emerald-800 text-xs font-bold uppercase tracking-wider h-9 px-3 border"><Users className="mr-1.5 h-3.5 w-3.5" /> Volunteering</Badge>
-                      <LeaveEventDialog eventId={e.id} eventTitle={e.title} />
-                    </div>
-                  ) : mySelfReq ? (
-                    <Badge variant="outline" className={cn(
-                      "text-xs font-bold uppercase tracking-wider h-9 px-3 border",
-                      mySelfReq.status === "pending" ? "bg-amber-50 border-amber-200 text-amber-800" :
-                      mySelfReq.status === "rejected" ? "bg-rose-50 border-rose-200 text-rose-800" :
-                      mySelfReq.status === "left" ? "bg-slate-50 border-slate-200 text-slate-800" :
-                      "bg-slate-50 border-slate-200 text-slate-800"
-                    )}>
-                      Request: {mySelfReq.status}
-                    </Badge>
-                  ) : (
-                    <Button size="sm" className="bg-deep-forest hover:bg-deep-forest/90 text-white font-semibold h-9 rounded-lg text-xs cursor-pointer shadow-sm active:scale-98 transition-all px-4" onClick={async () => {
-                      await eventService.requestVolunteer(e.id, user!.id, user!.name, e.title);
-                      qc.invalidateQueries();
-                      toast.success("Volunteer request sent");
-                    }}>Request to Volunteer</Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <Dialog open={!!selectedEvent} onOpenChange={(open) => !open && setSelectedEvent(null)}>
+        <DialogContent className="sm:max-w-[600px] p-0 border-line/60 rounded-2xl overflow-hidden bg-surface-variant/20">
+          {selectedEvent && (
+            <div className="p-4 sm:p-6">
+              {renderEventCard(selectedEvent)}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -30,3 +30,11 @@ class User(Base):
     offered_skills_text = Column(String, nullable=True)
     volunteer_interest = Column(String, nullable=True)
     has_completed_survey = Column(Boolean, nullable=False, default=False)
+
+
+class UserSummary(Base):
+    __tablename__ = "user_summaries"
+    id = Column(String, primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String, ForeignKey("users.id"), unique=True, index=True, nullable=False)
+    summary_text = Column(String, nullable=False)
+    generated_at = Column(String, nullable=False, default=lambda: date.today().isoformat())

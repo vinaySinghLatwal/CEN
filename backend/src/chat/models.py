@@ -12,4 +12,4 @@ class ChatMessage(Base):
     receiver_id = Column(String, ForeignKey("users.id"), nullable=False)
     sender_name = Column(String, nullable=False)
     content = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=lambda: datetime.now(datetime.UTC))

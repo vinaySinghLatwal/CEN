@@ -24,7 +24,7 @@ def test_create_event_operational_gating(client, db_session):
     headers = {"Authorization": f"Bearer {token}"}
 
     # Attempt to create event in non-operational society -> Fails 403 Forbidden
-    event_payload = {"title": "Cleanup Day", "description": "Park cleaning", "date": "2026-08-01", "volunteersNeeded": 5}
+    event_payload = {"title": "Cleanup Day", "description": "Park cleaning", "startTime": "2026-08-01T10:00:00Z", "endTime": "2026-08-01T12:00:00Z", "volunteersNeeded": 5}
     fail_resp = client.post("/api/v1/events", json=event_payload, headers=headers)
     assert fail_resp.status_code == 403
     assert "Society is not operational" in fail_resp.json()["detail"]
@@ -57,7 +57,7 @@ def test_volunteer_request_and_approval(client, db_session):
     resident.society_id = soc.id
     db_session.commit()
 
-    event = EventItem(title="Tree Plantation", description="Planting trees", date="2026-08-15", created_by_coordinator_id=coord.id, volunteers_needed=10, volunteers="", society_id=soc.id)
+    event = EventItem(title="Tree Plantation", description="Planting trees", start_time="2026-08-15T10:00:00Z", end_time="2026-08-15T12:00:00Z", created_by_coordinator_id=coord.id, volunteers_needed=10, volunteers="", society_id=soc.id)
     db_session.add(event)
     db_session.commit()
 
@@ -99,7 +99,7 @@ def test_volunteer_withdrawal(client, db_session):
     resident.society_id = soc.id
     db_session.commit()
 
-    event = EventItem(title="Book Drive", description="Collecting books", date="2026-08-20", created_by_coordinator_id="c1", volunteers_needed=4, volunteers=resident.id, society_id=soc.id)
+    event = EventItem(title="Book Drive", description="Collecting books", start_time="2026-08-20T10:00:00Z", end_time="2026-08-20T12:00:00Z", created_by_coordinator_id="c1", volunteers_needed=4, volunteers=resident.id, society_id=soc.id)
     db_session.add(event)
     db_session.commit()
 
@@ -120,3 +120,39 @@ def test_volunteer_withdrawal(client, db_session):
     # Verify resident ID was removed from event.volunteers
     db_session.refresh(event)
     assert resident.id not in event.volunteers
+
+def test_create_event_with_colors(client, db_session):
+    from src.auth.service import create_user
+    from src.users.schemas import UserCreate
+    from src.societies.models import Society
+
+    owner = create_user(db_session, UserCreate(name="Owner", email="colowner@cen.app", password="password123"), role="owner")
+    soc = Society(name="Color Society", address="1 Color Rd", admin_id=owner.id, coordinator_count=2, key="COL-SOC")
+    db_session.add(soc)
+    db_session.commit()
+
+    coord = create_user(db_session, UserCreate(name="Coord Color", email="coordcol@cen.app", password="password123"), role="coordinator")
+    coord.is_coordinator = True
+    coord.society_id = soc.id
+    db_session.commit()
+
+    login_resp = client.post("/api/v1/auth/login", json={"email": "coordcol@cen.app", "password": "password123"})
+    token = login_resp.json().get("accessToken") or login_resp.json().get("access_token")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    event_payload = {
+        "title": "Colorful Event", 
+        "description": "An event with custom colors", 
+        "startTime": "2026-08-01T10:00:00Z", 
+        "endTime": "2026-08-01T12:00:00Z", 
+        "volunteersNeeded": 5,
+        "color": "#ff0000",
+        "textColor": "#ffffff"
+    }
+    
+    resp = client.post("/api/v1/events", json=event_payload, headers=headers)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["title"] == "Colorful Event"
+    assert data["color"] == "#ff0000"
+    assert data["textColor"] == "#ffffff"

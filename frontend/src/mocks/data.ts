@@ -116,14 +116,15 @@ export interface EventItem {
   id: string;
   title: string;
   description: string;
-  date: string;
-  time?: string;
-  location?: string;
+  startTime: string;
+  endTime: string;
   createdByCoordinatorId: string;
   volunteersNeeded: number;
   volunteers: string[];
   status: "upcoming" | "completed";
   societyId: string;
+  color?: string;
+  textColor?: string;
 }
 
 export interface VolunteerRequest {
@@ -562,7 +563,8 @@ export const events: EventItem[] = [
     id: "ev-1",
     title: "Community Cleanup Day",
     description: "Help us tidy up the shared garden and common areas.",
-    date: "2026-08-05",
+    startTime: "2026-08-05T09:00:00Z",
+    endTime: "2026-08-05T12:00:00Z",
     createdByCoordinatorId: "u-coord",
     volunteersNeeded: 8,
     volunteers: ["u-res2"],
@@ -573,7 +575,8 @@ export const events: EventItem[] = [
     id: "ev-2",
     title: "Kids Art Workshop",
     description: "Weekend art session for children aged 6-12.",
-    date: "2026-08-12",
+    startTime: "2026-08-12T10:00:00Z",
+    endTime: "2026-08-12T13:00:00Z",
     createdByCoordinatorId: "u-coord2",
     volunteersNeeded: 4,
     volunteers: [],
@@ -584,7 +587,8 @@ export const events: EventItem[] = [
     id: "ev-3",
     title: "Diwali Potluck",
     description: "Bring a dish and celebrate together.",
-    date: "2026-11-01",
+    startTime: "2026-11-01T18:00:00Z",
+    endTime: "2026-11-01T22:00:00Z",
     createdByCoordinatorId: "u-coord",
     volunteersNeeded: 6,
     volunteers: ["u-res", "u-res3"],

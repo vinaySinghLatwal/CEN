@@ -14,4 +14,4 @@ class Notice(Base):
     title = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     category = Column(String, default="General")
-    date = Column(String, default=lambda: datetime.utcnow().strftime("%Y-%m-%d"))
+    date = Column(String, default=lambda: datetime.now(datetime.UTC).strftime("%Y-%m-%d"))

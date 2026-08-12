@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from src.database import get_db
@@ -7,6 +7,7 @@ from src.dependencies import get_current_user_from_token, require_roles
 from src.users import service as user_service
 from src.users.models import User
 from src.users.schemas import IdProofUploadPayload, OnboardingSurveyPayload, UserResponse, UserUpdate
+from src.ai.service import generate_and_save_onboarding_summary
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -70,16 +71,31 @@ def update_my_profile(
 @router.post("/me/survey", response_model=UserResponse)
 def update_onboarding_survey(
     payload: OnboardingSurveyPayload,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_from_token),
 ):
-    return user_service.update_onboarding_survey(
+    res = user_service.update_onboarding_survey(
         db,
         current_user.id,
         payload.interests,
         payload.offered_skills_text or "",
         payload.volunteer_interest or "",
     )
+    background_tasks.add_task(generate_and_save_onboarding_summary, current_user.id)
+    return res
+
+
+@router.get("/me/summary", response_model=dict)
+def get_my_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_from_token),
+):
+    from src.users.models import UserSummary
+    summary = db.query(UserSummary).filter(UserSummary.user_id == current_user.id).first()
+    if summary:
+        return {"summary": summary.summary_text, "generated_at": summary.generated_at}
+    return {"summary": "Your personalized community summary is being generated and will be available soon.", "generated_at": None}
 
 
 @router.get("/{user_id}", response_model=UserResponse)

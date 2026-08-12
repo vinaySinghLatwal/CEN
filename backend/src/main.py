@@ -30,11 +30,26 @@ import src.chat.models  # noqa
 # Create tables if not exist
 Base.metadata.create_all(bind=engine)
 
+from contextlib import asynccontextmanager
+from apscheduler.schedulers.background import BackgroundScheduler
+from src.ai.service import generate_user_summaries_job
+
+scheduler = BackgroundScheduler()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Run the user summary generation every day at 2 AM
+    scheduler.add_job(generate_user_summaries_job, "cron", hour=2)
+    scheduler.start()
+    yield
+    scheduler.shutdown()
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Exception Handlers

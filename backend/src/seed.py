@@ -103,6 +103,9 @@ def reset_and_seed_db():
             society_id=demo_soc.id,
             household_id="h-101",
             credit_balance=25,
+            interests="Music, Teaching, Technology",
+            volunteer_interest="Education, Tech Support, Community Outreach",
+            offered_skills_text="I can teach guitar and fix computers.",
         )
         res2 = User(
             id="u-res2",
@@ -113,9 +116,28 @@ def reset_and_seed_db():
             society_id=demo_soc.id,
             household_id="h-102",
             credit_balance=15,
+            interests="Gardening, Tools, DIY",
+            volunteer_interest="Park Cleanup, Maintenance, Green Initiatives",
+            offered_skills_text="I have a lawn mower and gardening tools to share.",
         )
         db.add(res1)
         db.add(res2)
+        db.flush()
+
+        from src.users.models import UserSummary
+        from datetime import date
+        us1 = UserSummary(
+            user_id=res1.id,
+            summary_text="Welcome to the community pulse! This week, we have some great music events and tech workshops you might enjoy based on your interests. Dive in and share your guitar skills with others!",
+            generated_at=date.today().isoformat()
+        )
+        us2 = UserSummary(
+            user_id=res2.id,
+            summary_text="Hello Eva! The community garden is thriving this week. Based on your DIY interests, check out the upcoming tool-share meetup and park cleanup event.",
+            generated_at=date.today().isoformat()
+        )
+        db.add(us1)
+        db.add(us2)
 
         # 6. Create Households
         h1 = Household(id="h-101", society_id=demo_soc.id, unit_number="A-101", claimed=True, claimed_by_user_id=res1.id)
@@ -158,7 +180,8 @@ def reset_and_seed_db():
             id="ev-cleanup",
             title="Community Park Clean-Up",
             description="Join us for a morning clean-up and landscaping of the central park.",
-            date="2026-08-05",
+            start_time="2026-08-05T09:00:00",
+            end_time="2026-08-05T12:00:00",
             created_by_coordinator_id=coord1.id,
             volunteers_needed=5,
             volunteers=res1.id,

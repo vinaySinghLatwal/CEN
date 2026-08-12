@@ -147,3 +147,47 @@ class VerifyIdProofResult(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
     )
+
+
+class CheckEventClashPayload(BaseModel):
+    title: str
+    description: str
+    start_time: str
+    end_time: str
+    society_id: str
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
+class CheckEventClashResult(BaseModel):
+    has_clash: bool
+    reason: str
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
+class CoordinatorEventSuggestion(BaseModel):
+    title: str
+    description: str
+    reason: str
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
+class ResidentSuggestionsResult(BaseModel):
+    skill_suggestions: List[dict]
+    volunteer_suggestions: List[dict]
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )

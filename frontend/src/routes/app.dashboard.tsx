@@ -20,6 +20,7 @@ import {
   Settings, ShieldAlert, Award, ChevronRight, Activity, Plus
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { getCoordinatorEventSuggestions, getResidentSuggestions } from "@/services/ai";
 
 export const Route = createFileRoute("/app/dashboard")({
   component: Dashboard,
@@ -308,22 +309,19 @@ function CoordDash() {
   const pendRes = useQuery({ queryKey: ["pRes", sid], queryFn: () => resourceService.listPending(sid) });
   const complaints = useQuery({ queryKey: ["comps", sid], queryFn: () => complaintService.listSociety(sid) });
   const events = useQuery({ queryKey: ["ev", sid], queryFn: () => eventService.list(sid) });
+  const coordSuggestions = useQuery({ queryKey: ["coordSugg", sid], queryFn: () => getCoordinatorEventSuggestions() });
+  
   const openComps = complaints.data?.filter((c) => c.status === "open").length ?? 0;
   const approvalCount = (pendSkills.data?.filter((s) => s.providerId !== user!.id).length ?? 0) +
                         (pendRes.data?.filter((r) => r.ownerId !== user!.id).length ?? 0);
   
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat icon={CheckSquare} label="Pending Approvals" value={approvalCount} trend={{ value: approvalCount > 0 ? "Action needed" : "Clear", type: approvalCount > 0 ? "down" : "neutral" }} />
-        <Stat icon={AlertCircle} label="Open Complaints" value={openComps} trend={{ value: openComps > 0 ? "Pending" : "Resolved", type: openComps > 0 ? "down" : "neutral" }} />
-        <Stat icon={Calendar} label="Upcoming Events" value={events.data?.filter((e) => e.status === "upcoming").length ?? 0} />
-        <Stat icon={Wallet} label="My Wallet Balance" value={`${user!.creditBalance} Crd`} />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      {/* Main Column */}
+      <div className="lg:col-span-2 space-y-6">
         {/* Approvals Action Board */}
-        <Card className="lg:col-span-2 border-line/60 shadow-sm">
+        <Card className="border-line/60 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base font-bold text-ink">Coordinator Action Board</CardTitle>
             <CardDescription className="text-xs text-on-surface-variant">Clear list approvals and resolve member disputes.</CardDescription>
@@ -360,6 +358,52 @@ function CoordDash() {
             </Link>
           </CardContent>
         </Card>
+
+        {/* AI Event Strategy Widget */}
+        <Card className="border-emerald-200 shadow-sm bg-gradient-to-br from-emerald-50 via-white to-transparent">
+          <CardHeader className="pb-3 border-b border-emerald-100">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 border border-emerald-200">
+                <Sparkles className="h-4 w-4 animate-pulse" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold text-ink">AI Event Strategy</CardTitle>
+                <CardDescription className="text-xs text-on-surface-variant">Data-driven event ideas based on resident onboarding preferences.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-3">
+            {coordSuggestions.isLoading ? (
+              <div className="animate-pulse flex space-x-4">
+                <div className="flex-1 space-y-3 py-1">
+                  <div className="h-4 bg-emerald-200/50 rounded w-3/4"></div>
+                  <div className="h-4 bg-emerald-200/50 rounded"></div>
+                  <div className="h-4 bg-emerald-200/50 rounded w-5/6"></div>
+                </div>
+              </div>
+            ) : coordSuggestions.data && coordSuggestions.data.length > 0 ? (
+              coordSuggestions.data.map((s, idx) => (
+                <div key={idx} className="p-3 rounded-lg border border-emerald-100 bg-white/60">
+                  <div className="text-sm font-bold text-emerald-950">{s.title}</div>
+                  <div className="text-xs text-emerald-800/80 mt-0.5">{s.description}</div>
+                  <div className="text-[10px] mt-1.5 font-medium text-emerald-700">💡 Why? {s.reason}</div>
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-emerald-800">No suggestions available right now.</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Side Column */}
+      <div className="lg:col-span-1 space-y-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Stat icon={CheckSquare} label="Pending Approvals" value={approvalCount} trend={{ value: approvalCount > 0 ? "Action needed" : "Clear", type: approvalCount > 0 ? "down" : "neutral" }} />
+          <Stat icon={AlertCircle} label="Open Complaints" value={openComps} trend={{ value: openComps > 0 ? "Pending" : "Resolved", type: openComps > 0 ? "down" : "neutral" }} />
+          <Stat icon={Calendar} label="Upcoming Events" value={events.data?.filter((e) => e.status === "upcoming").length ?? 0} />
+          <Stat icon={Wallet} label="My Wallet Balance" value={`${user!.creditBalance} Crd`} />
+        </div>
 
         {/* Quick Links Menu */}
         <Card className="border-line/60 shadow-sm flex flex-col justify-between">
@@ -400,6 +444,7 @@ function CoordDash() {
           </CardContent>
         </Card>
       </div>
+
     </div>
   );
 }
@@ -411,80 +456,136 @@ function ResidentDash() {
   const complaints = useQuery({ queryKey: ["myComps", user!.id], queryFn: () => complaintService.listForUser(user!.id) });
   const notices = useQuery({ queryKey: ["notices", sid], queryFn: () => noticeService.list(sid) });
   const txs = useQuery({ queryKey: ["tx", user!.id], queryFn: () => creditService.getTransactions(user!.id) });
+  const residentSuggestions = useQuery({ queryKey: ["resSugg", user!.id], queryFn: () => getResidentSuggestions() });
+  const userSummary = useQuery({ queryKey: ["userSummary", user!.id], queryFn: () => userService.getSummary() });
+
   const myOpen = complaints.data?.filter((c) => c.status === "open").length ?? 0;
   const myActive = skills.data?.filter((s) => s.providerId === user!.id && s.status === "approved").length ?? 0;
 
-  const approvedSkills = skills.data?.filter((s) => s.status === "approved" && s.providerId !== user!.id) ?? [];
-  const matchedSkills = user!.interests && user!.interests.length > 0
-    ? approvedSkills.filter((s) => user!.interests?.includes(s.category))
-    : [];
-  const recommended = matchedSkills.length > 0
-    ? matchedSkills.slice(0, 3)
-    : approvedSkills.slice(0, 3);
-
   return (
-    <div className="space-y-6">
-      {/* Stat Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat icon={Wallet} label="Credit Balance" value={`${user!.creditBalance} Crd`} trend={{ value: "Wallet active", type: "neutral" }} />
-        <Stat icon={Sparkles} label="Active Services" value={myActive} hint="Approved exchange listings" />
-        <Stat icon={AlertCircle} label="Open Issues" value={myOpen} trend={{ value: myOpen === 0 ? "Clean" : `${myOpen} open`, type: myOpen === 0 ? "up" : "down" }} />
-        <Stat icon={Calendar} label="Volunteering" value="2" hint="Registered events" />
-      </div>
-
-      {/* Recommended for You Widget */}
-      <Card className="border-soft-violet/30 shadow-sm bg-gradient-to-br from-soft-violet/5 via-[#fbfaff] to-transparent">
-        <CardHeader className="pb-3 border-b border-soft-violet/15">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-soft-violet/15 flex items-center justify-center text-soft-violet border border-soft-violet/20">
-                <Sparkles className="h-4 w-4 animate-pulse" />
-              </div>
-              <div>
-                <CardTitle className="text-sm font-bold text-ink">Personalized Recommendations (AI)</CardTitle>
-                <CardDescription className="text-[10px] text-on-surface-variant">Tailored service suggestions matching your listed interests.</CardDescription>
-              </div>
-            </div>
-            <Link to="/app/skills">
-              <span className="text-[10px] font-bold text-soft-violet hover:underline cursor-pointer">Browse All</span>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4 space-y-3">
-          {recommended.length === 0 ? (
-            <div className="py-6 text-center text-xs text-on-surface-variant border border-dashed border-line rounded-xl bg-white">
-              No matching listings found. Try updating your interests in Settings!
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-3">
-              {recommended.map((s) => (
-                <div key={s.id} className="bg-white border border-line/45 hover:border-soft-violet/40 p-3.5 rounded-xl flex flex-col justify-between hover:shadow-sm transition-all group">
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <Badge className="bg-soft-violet/10 text-soft-violet hover:bg-soft-violet/15 text-[8px] uppercase tracking-wide border-0 font-bold px-1.5 py-0.5 rounded">
-                        {s.category}
-                      </Badge>
-                      <span className="text-[10px] font-bold text-deep-forest">{s.credits} Crd</span>
-                    </div>
-                    <div className="font-bold text-xs text-ink truncate group-hover:text-soft-violet transition-colors">{s.title}</div>
-                    <p className="text-[10px] text-on-surface-variant line-clamp-2 leading-relaxed">{s.description}</p>
-                  </div>
-                  
-                  <div className="mt-3 pt-2.5 border-t border-line/30 flex justify-between items-center text-[9px]">
-                    <span className="text-on-surface-variant font-medium">Offered by <span className="font-semibold text-ink">{s.providerName.split(" ")[0]}</span></span>
-                    <Link to="/app/skills">
-                      <span className="font-bold text-soft-violet hover:underline cursor-pointer">View</span>
-                    </Link>
-                  </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Column */}
+      <div className="lg:col-span-2 space-y-6">
+        
+        {/* Personalized AI Summary Widget */}
+        <Card className="border-emerald-200 shadow-sm bg-gradient-to-br from-emerald-50 via-white to-transparent">
+          <CardHeader className="pb-3 border-b border-emerald-100">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 border border-emerald-200">
+                  <Sparkles className="h-4 w-4 animate-pulse" />
                 </div>
-              ))}
+                <div>
+                  <CardTitle className="text-sm font-bold text-ink">Your Community Pulse (AI Summary)</CardTitle>
+                </div>
+              </div>
+              {userSummary.data?.generated_at && (
+                <span className="text-[10px] text-on-surface-variant font-medium">
+                  Updated {new Date(userSummary.data.generated_at).toLocaleDateString()}
+                </span>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <p className="text-xs text-ink leading-relaxed font-medium">
+              {userSummary.isLoading ? "Loading your latest community pulse..." : userSummary.data?.summary}
+            </p>
+          </CardContent>
+        </Card>
 
-      {/* Two Column Layout: Notices and Transactions */}
-      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Recommended for You Widget (AI) */}
+        <Card className="border-soft-violet/30 shadow-sm bg-gradient-to-br from-soft-violet/5 via-[#fbfaff] to-transparent">
+          <CardHeader className="pb-3 border-b border-soft-violet/15">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-soft-violet/15 flex items-center justify-center text-soft-violet border border-soft-violet/20">
+                  <Sparkles className="h-4 w-4 animate-pulse" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold text-ink">AI Skill Recommendations</CardTitle>
+                  <CardDescription className="text-[10px] text-on-surface-variant">Tailored service suggestions matching your listed interests.</CardDescription>
+                </div>
+              </div>
+              <Link to="/app/skills">
+                <span className="text-[10px] font-bold text-soft-violet hover:underline cursor-pointer">Browse All</span>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-3">
+            {residentSuggestions.isLoading ? (
+              <div className="animate-pulse flex space-x-4">
+                <div className="flex-1 space-y-3 py-1">
+                  <div className="h-4 bg-soft-violet/20 rounded w-3/4"></div>
+                  <div className="h-4 bg-soft-violet/20 rounded"></div>
+                </div>
+              </div>
+            ) : residentSuggestions.data?.skillSuggestions?.length === 0 ? (
+              <div className="py-6 text-center text-xs text-on-surface-variant border border-dashed border-line rounded-xl bg-white">
+                No matching listings found. Try updating your interests in Settings!
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {residentSuggestions.data?.skillSuggestions.map((s: any) => (
+                  <div key={s.id} className="bg-white border border-line/45 hover:border-soft-violet/40 p-3.5 rounded-xl flex flex-col justify-between hover:shadow-sm transition-all group">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <Badge className="bg-soft-violet/10 text-soft-violet hover:bg-soft-violet/15 text-[8px] uppercase tracking-wide border-0 font-bold px-1.5 py-0.5 rounded">
+                          {s.category}
+                        </Badge>
+                        <span className="text-[10px] font-bold text-deep-forest">{s.credits} Crd</span>
+                      </div>
+                      <div className="font-bold text-xs text-ink truncate group-hover:text-soft-violet transition-colors">{s.title}</div>
+                      <p className="text-[9px] text-on-surface-variant line-clamp-2 leading-relaxed italic">{s.reason}</p>
+                    </div>
+                    
+                    <div className="mt-3 pt-2.5 border-t border-line/30 flex justify-between items-center text-[9px]">
+                      <span className="text-on-surface-variant font-medium">Offered by <span className="font-semibold text-ink">{s.providerName?.split(" ")[0] || "Resident"}</span></span>
+                      <Link to="/app/skills">
+                        <span className="font-bold text-soft-violet hover:underline cursor-pointer">View</span>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* AI Volunteer Suggestions */}
+        <Card className="border-deep-forest/20 shadow-sm bg-gradient-to-br from-deep-forest/5 via-[#fbfaff] to-transparent">
+          <CardHeader className="pb-3 border-b border-deep-forest/10">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-deep-forest/10 flex items-center justify-center text-deep-forest border border-deep-forest/20">
+                  <Sparkles className="h-4 w-4 animate-pulse" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold text-ink">Volunteer Matches</CardTitle>
+                  <CardDescription className="text-[10px] text-on-surface-variant">Upcoming events that match your volunteer profile.</CardDescription>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-3">
+            {residentSuggestions.isLoading ? (
+              <div className="text-xs text-on-surface-variant">Loading suggestions...</div>
+            ) : residentSuggestions.data?.volunteerSuggestions?.length === 0 ? (
+              <div className="py-6 text-center text-xs text-on-surface-variant border border-dashed border-line rounded-xl bg-white">
+                No matching volunteer roles at the moment.
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {residentSuggestions.data?.volunteerSuggestions.map((v: any, idx: number) => (
+                  <div key={idx} className="bg-white border border-line/45 p-3.5 rounded-xl flex flex-col justify-between hover:shadow-sm transition-all group">
+                    <div className="font-bold text-xs text-ink">{v.title}</div>
+                    <div className="text-[10px] mt-1.5 text-on-surface-variant leading-relaxed italic">{v.reason}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Notices Board Widget */}
         <Card className="border-line/60 shadow-sm flex flex-col justify-between">
           <CardHeader className="pb-3 border-b border-line/45">
@@ -519,49 +620,54 @@ function ResidentDash() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Side Column */}
+      <div className="lg:col-span-1 space-y-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Stat icon={Wallet} label="Credit Balance" value={`${user!.creditBalance} Crd`} trend={{ value: "Wallet active", type: "neutral" }} />
+          <Stat icon={Sparkles} label="Active Services" value={myActive} hint="Approved exchange listings" />
+          <Stat icon={AlertCircle} label="Open Issues" value={myOpen} trend={{ value: myOpen === 0 ? "Clean" : `${myOpen} open`, type: myOpen === 0 ? "up" : "down" }} />
+          <Stat icon={Calendar} label="Volunteering" value="2" hint="Registered events" />
+        </div>
 
         {/* Transactions ledger Widget */}
         <Card className="border-line/60 shadow-sm flex flex-col justify-between">
           <CardHeader className="pb-3 border-b border-line/45">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-800 border border-emerald-100">
-                  <Package className="h-4 w-4" />
+                <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600 border border-orange-100">
+                  <Activity className="h-4 w-4" />
                 </div>
-                <CardTitle className="text-base font-bold text-ink">Recent Wallet Activity</CardTitle>
+                <CardTitle className="text-base font-bold text-ink">Recent Activity</CardTitle>
               </div>
               <Link to="/app/wallet">
                 <span className="text-[10px] font-bold text-deep-forest hover:underline cursor-pointer">Ledger</span>
               </Link>
             </div>
           </CardHeader>
-          <CardContent className="pt-4 flex-1 space-y-2">
-            {!txs.data || txs.data.length === 0 ? (
+          <CardContent className="pt-4 flex-1 space-y-4">
+            {txs.data?.length === 0 ? (
               <div className="py-8 text-center text-xs text-on-surface-variant border border-dashed border-line rounded-xl">
-                No transactions completed yet.
+                No transactions yet.
               </div>
             ) : (
-              txs.data?.slice(-4).reverse().map((t) => (
-                <div key={t.id} className="flex justify-between items-center border-b border-line/35 py-2.5 text-xs last:border-0 hover:bg-panel/40 px-1 rounded transition-colors">
-                  <div className="flex items-center gap-2 min-w-0">
-                    {t.type === "earned" ? (
-                      <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 flex-shrink-0">
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                      </div>
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 flex-shrink-0">
-                        <ArrowDownLeft className="h-3.5 w-3.5" />
-                      </div>
-                    )}
-                    <span className="font-medium text-ink truncate">{t.description}</span>
+              txs.data?.slice(0, 4).map((t) => (
+                <div key={t.id} className="flex justify-between items-center group">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${
+                      t.amount > 0 ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"
+                    }`}>
+                      {t.amount > 0 ? <ArrowDownLeft className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-ink leading-none">{t.description}</div>
+                      <div className="text-[10px] text-on-surface-variant mt-1">{t.date}</div>
+                    </div>
                   </div>
-                  <span className={`font-bold px-2 py-0.5 rounded text-[10px] flex-shrink-0 ${
-                    t.type === "earned" 
-                      ? "text-emerald-800 bg-emerald-50 border border-emerald-100" 
-                      : "text-amber-800 bg-amber-50 border border-amber-100"
-                  }`}>
-                    {t.type === "earned" ? "+" : "-"}{t.amount} Crd
-                  </span>
+                  <div className={`text-xs font-bold ${t.amount > 0 ? "text-emerald-700" : "text-ink"}`}>
+                    {t.amount > 0 ? "+" : ""}{t.amount}
+                  </div>
                 </div>
               ))
             )}

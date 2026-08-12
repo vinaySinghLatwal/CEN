@@ -39,7 +39,7 @@ source venv/bin/activate
 ### Step 3: Install Dependencies
 
 ```bash
-pip install -r pyproject.toml
+pip install .
 ```
 *Alternatively, install using standard setuptools:*
 ```bash

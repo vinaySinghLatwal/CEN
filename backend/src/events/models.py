@@ -18,12 +18,15 @@ class EventItem(Base):
     id = Column(String, primary_key=True, default=generate_ev_id, index=True)
     title = Column(String, nullable=False)
     description = Column(String, nullable=False)
-    date = Column(String, nullable=False)
+    start_time = Column(String, nullable=False)  # Stored as ISO format string for SQLite compatibility
+    end_time = Column(String, nullable=False)
     created_by_coordinator_id = Column(String, nullable=False, index=True)
     volunteers_needed = Column(Integer, nullable=False, default=1)
     volunteers = Column(String, nullable=False, default="")  # Comma-separated user IDs
     status = Column(String, nullable=False, default="upcoming")  # upcoming | completed
     society_id = Column(String, nullable=False, index=True)
+    color = Column(String, nullable=False, default="#dce8fb")
+    text_color = Column(String, nullable=False, default="#1e3a6e")
 
 
 class VolunteerRequest(Base):

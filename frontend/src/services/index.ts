@@ -533,6 +533,15 @@ export const userService = {
     }
     return delay(u ?? null);
   },
+  getSummary: async () => {
+    try {
+      const res = await apiFetch<any>("/users/me/summary");
+      if (res) return res;
+    } catch (err) {
+      console.warn("[API Notice] getSummary fallback:", err);
+    }
+    return delay({ summary: "Your personalized community summary is being generated and will be available soon.", generated_at: null });
+  },
 };
 
 // ---------------- Skills ----------------
@@ -745,24 +754,25 @@ export const eventService = {
     }
     return delay(state.events.filter((e) => e.societyId === societyId));
   },
-  create: async (e: Omit<mock.EventItem, "id" | "volunteers" | "status">) => {
+  create: async (e: Omit<mock.EventItem, "id" | "volunteers" | "status"> & { startTime: string; endTime: string; color?: string; textColor?: string }) => {
     try {
       const res = await apiFetch<any>("/events", {
         method: "POST",
         body: JSON.stringify({
           title: e.title,
-          date: e.date,
-          time: e.time,
-          location: e.location,
+          startTime: e.startTime,
+          endTime: e.endTime,
           description: e.description,
           volunteersNeeded: e.volunteersNeeded,
+          color: e.color || "#dce8fb",
+          textColor: e.textColor || "#1e3a6e",
         }),
       });
       if (res) return res;
     } catch (err: any) {
       if (err.message) throw err;
     }
-    const ne: mock.EventItem = { ...e, id: uid("ev"), volunteers: [], status: "upcoming" };
+    const ne: mock.EventItem = { ...e, id: uid("ev"), volunteers: [], status: "upcoming", color: e.color || "#dce8fb", textColor: e.textColor || "#1e3a6e" } as mock.EventItem;
     state.events.push(ne);
     return delay(ne);
   },

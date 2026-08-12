@@ -20,15 +20,31 @@ def create_event(db: Session, coordinator: User, event_in: EventCreate) -> Event
     if not soc_service.is_society_operational(soc):
         raise ForbiddenException("Society is not operational until at least 2 coordinators are registered.")
 
+    overlapping_event = db.query(EventItem).filter(
+        EventItem.society_id == coordinator.society_id,
+        EventItem.start_time < event_in.end_time,
+        EventItem.end_time > event_in.start_time
+    ).first()
+
+    if overlapping_event:
+        raise APIException(
+            status_code=400,
+            detail=f"This event overlaps with an existing event: {overlapping_event.title}",
+            code="EVENT_OVERLAP"
+        )
+
     event = EventItem(
         title=event_in.title.strip(),
         description=event_in.description.strip(),
-        date=event_in.date,
+        start_time=event_in.start_time,
+        end_time=event_in.end_time,
         created_by_coordinator_id=coordinator.id,
         volunteers_needed=event_in.volunteers_needed,
         volunteers="",
         status="upcoming",
         society_id=coordinator.society_id,
+        color=event_in.color,
+        text_color=event_in.text_color,
     )
     db.add(event)
     db.commit()

@@ -6,8 +6,11 @@ from pydantic.alias_generators import to_camel
 class EventCreate(BaseModel):
     title: str
     description: str
-    date: str
+    start_time: str
+    end_time: str
     volunteers_needed: int = Field(..., gt=0)
+    color: Optional[str] = "#dce8fb"
+    text_color: Optional[str] = "#1e3a6e"
 
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -19,12 +22,15 @@ class EventResponse(BaseModel):
     id: str
     title: str
     description: str
-    date: str
+    start_time: str
+    end_time: str
     created_by_coordinator_id: str
     volunteers_needed: int
     volunteers: List[str] = Field(default_factory=list)
     status: str
     society_id: str
+    color: str
+    text_color: str
 
     @field_validator("volunteers", mode="before")
     @classmethod

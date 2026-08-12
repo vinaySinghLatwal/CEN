@@ -22,6 +22,8 @@ import {
 import { CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { noticeService } from "@/services";
+
 export const Route = createFileRoute("/app/coord/approvals")({ component: Page });
 
 function Page() {
@@ -29,17 +31,22 @@ function Page() {
   const sid = user!.societyId!;
   const skills = useQuery({ queryKey: ["pSkills", sid], queryFn: () => skillService.listPending(sid) });
   const res = useQuery({ queryKey: ["pRes", sid], queryFn: () => resourceService.listPending(sid) });
+  const notices = useQuery({ queryKey: ["notices", sid], queryFn: () => noticeService.list(sid) });
   
   const skillsToReview = skills.data?.filter((s) => s.providerId !== user!.id) ?? [];
   const resToReview = res.data?.filter((r) => r.ownerId !== user!.id) ?? [];
   const mySkills = skills.data?.filter((s) => s.providerId === user!.id) ?? [];
   const myRes = res.data?.filter((r) => r.ownerId === user!.id) ?? [];
+  const insights = notices.data?.filter((n) => n.category === "Coordinator Insight") ?? [];
 
   return (
     <div className="space-y-6 pb-12 animate-page-fade">
       <PageHeader title="Approvals Hub" description="Review submissions from residents and other coordinators. You cannot approve your own." />
-      <Tabs defaultValue="skills" className="w-full">
+      <Tabs defaultValue="insights" className="w-full">
         <TabsList className="bg-panel/40 p-1 rounded-xl border border-line">
+          <TabsTrigger value="insights" className="rounded-lg text-xs font-semibold px-4 py-2 cursor-pointer transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Member Insights ({insights.length})
+          </TabsTrigger>
           <TabsTrigger value="skills" className="rounded-lg text-xs font-semibold px-4 py-2 cursor-pointer transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm">
             Skills ({skillsToReview.length})
           </TabsTrigger>
@@ -51,6 +58,9 @@ function Page() {
           </TabsTrigger>
         </TabsList>
         <div className="h-4" />
+        <TabsContent value="insights" className="animate-page-fade">
+          <InsightsList items={insights} />
+        </TabsContent>
         <TabsContent value="skills" className="animate-page-fade"><SkillsList items={skillsToReview} /></TabsContent>
         <TabsContent value="resources" className="animate-page-fade"><ResList items={resToReview} /></TabsContent>
         <TabsContent value="mine" className="animate-page-fade space-y-4">
@@ -61,6 +71,32 @@ function Page() {
           <ResList items={myRes} readonly />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function InsightsList({ items }: { items: any[] }) {
+  return (
+    <div className="space-y-3">
+      {items.map((insight) => (
+        <Card key={insight.id} className="border-indigo-200 shadow-sm bg-gradient-to-br from-indigo-50/50 via-white to-transparent">
+          <CardContent className="p-5">
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center">
+                <h3 className="font-bold text-sm text-ink">{insight.title}</h3>
+                <Badge className="bg-indigo-100 text-indigo-800 border border-indigo-200 text-[9px] uppercase font-bold tracking-wider">AI Insight</Badge>
+              </div>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                {insight.content}
+              </p>
+              <div className="text-[10px] text-on-surface-variant mt-2 font-medium">
+                Generated {new Date(insight.date).toLocaleDateString()}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+      {items.length === 0 && <div className="py-8 text-center text-xs text-on-surface-variant border border-dashed border-line rounded-xl bg-white">No insights available.</div>}
     </div>
   );
 }
