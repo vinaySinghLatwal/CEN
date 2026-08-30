@@ -4,7 +4,7 @@
 [![React](https://img.shields.io/badge/Frontend-React%2019%20%7C%20TypeScript-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Bundler-Vite%206-646CFF.svg?logo=vite&logoColor=white)](https://vitejs.dev)
 [![TailwindCSS](https://img.shields.io/badge/Styling-TailwindCSS%20v4-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![Pytest](https://img.shields.io/badge/Tests-52%2F52%20Passing-brightgreen.svg?logo=pytest&logoColor=white)](https://docs.pytest.org)
+[![Pytest](https://img.shields.io/badge/Tests-53%2F53%20Passing-brightgreen.svg?logo=pytest&logoColor=white)](https://docs.pytest.org)
 [![Google Gemini AI](https://img.shields.io/badge/AI-Google%20Gemini%202.5-4285F4.svg?logo=google&logoColor=white)](https://ai.google.dev)
 
 A comprehensive, hyper-local community empowerment and mutual-aid platform designed for gated residential societies, apartment complexes, and neighborhood associations. **CEN** facilitates peer-to-peer skill exchanges, physical resource sharing, transparent community governance, event coordination, volunteer matching, and dispute arbitration — powered by a resilient time-banking credit economy and Google Gemini AI.
