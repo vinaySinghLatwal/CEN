@@ -2,7 +2,8 @@
 // API CLIENT — Centralized Fetch Wrapper for FastAPI Backend (http://127.0.0.1:8000/api/v1)
 // ============================================================================
 
-export const API_BASE_URL = "http://127.0.0.1:8000/api/v1";
+export const API_BASE_URL =
+  (import.meta.env.VITE_API_URL as string) || "http://127.0.0.1:8000/api/v1";
 
 const TOKEN_KEY = "cen_auth_token";
 const USER_KEY = "cen_auth_user";

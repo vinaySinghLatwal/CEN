@@ -34,32 +34,48 @@ def call_gemini_llm(
 ) -> Optional[str]:
     """Invokes Google Gemini API using official v1beta REST endpoints with model fallback."""
     api_key = settings.GEMINI_API_KEY
-    if not api_key or not api_key.strip():
+    if (
+        not api_key
+        or not api_key.strip()
+        or "your-gemini-api-key" in api_key.lower()
+        or api_key.startswith("your-")
+        or api_key == "test"
+    ):
         return None
 
     models_to_try = [
-        "gemini-flash-latest",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
         "gemini-flash-lite-latest",
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
+        "gemini-3.8-flash",
     ]
-
 
     contents = []
     if history:
         for item in history:
             role = "user" if (getattr(item, "role", "user") == "user" or (isinstance(item, dict) and item.get("role") == "user")) else "model"
             content = getattr(item, "content", "") if hasattr(item, "content") else (item.get("content", "") if isinstance(item, dict) else str(item))
-            if content:
-                contents.append({"role": role, "parts": [{"text": content}]})
+            if not content or not str(content).strip():
+                continue
+            # Gemini requires the first turn to be 'user'
+            if not contents and role == "model":
+                continue
+            # Gemini requires strictly alternating roles
+            if contents and contents[-1]["role"] == role:
+                contents[-1]["parts"][0]["text"] += f"\n\n{content}"
+            else:
+                contents.append({"role": role, "parts": [{"text": str(content)}]})
 
-    contents.append({"role": "user", "parts": [{"text": prompt}]})
+    # Append prompt as user turn
+    if contents and contents[-1]["role"] == "user":
+        contents[-1]["parts"][0]["text"] += f"\n\n{prompt}"
+    else:
+        contents.append({"role": "user", "parts": [{"text": prompt}]})
 
     payload: Dict[str, Any] = {"contents": contents}
 
     if system_instruction:
-        payload["system_instruction"] = {
+        payload["systemInstruction"] = {
             "parts": [{"text": system_instruction}]
         }
 
@@ -75,7 +91,7 @@ def call_gemini_llm(
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=12) as response:
+            with urllib.request.urlopen(req, timeout=6) as response:
                 res_body = json.loads(response.read().decode("utf-8"))
                 candidates = res_body.get("candidates", [])
                 if candidates:
