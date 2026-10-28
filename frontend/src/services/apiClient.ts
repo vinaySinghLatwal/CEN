@@ -3,7 +3,12 @@
 // ============================================================================
 
 export const API_BASE_URL =
-  (import.meta.env.VITE_API_URL as string) || "http://127.0.0.1:8000/api/v1";
+  (import.meta.env.VITE_API_URL as string) ||
+  (typeof window !== "undefined" &&
+  window.location.hostname !== "localhost" &&
+  window.location.hostname !== "127.0.0.1"
+    ? "https://cen-k7rz.onrender.com/api/v1"
+    : "http://127.0.0.1:8000/api/v1");
 
 const TOKEN_KEY = "cen_auth_token";
 const USER_KEY = "cen_auth_user";
