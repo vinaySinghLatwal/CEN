@@ -9,13 +9,17 @@ if db_url.startswith("postgres://"):
 
 # For SQLite, enable check_same_thread=False
 connect_args = {}
+engine_kwargs = {"pool_pre_ping": True}
 if db_url.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
+else:
+    # Neon Serverless Postgres pooling best practices
+    engine_kwargs["pool_recycle"] = 300
 
 engine = create_engine(
     db_url,
     connect_args=connect_args,
-    pool_pre_ping=True,
+    **engine_kwargs,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
